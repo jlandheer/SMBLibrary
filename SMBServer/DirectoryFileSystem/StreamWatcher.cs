@@ -36,11 +36,7 @@ namespace SMBServer
         public override void Close()
         {
             m_stream.Close();
-            EventHandler handler = Closed;
-            if (handler != null)
-            {
-                handler(this, EventArgs.Empty);
-            }
+            Closed?.Invoke(this, EventArgs.Empty);
         }
 
         public override void Flush()
