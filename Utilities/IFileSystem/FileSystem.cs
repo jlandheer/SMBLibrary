@@ -24,7 +24,6 @@ namespace Utilities
 
         public void CopyFile(string sourcePath, string destinationPath)
         {
-            const int bufferLength = 1024 * 1024;
             FileSystemEntry sourceFile = GetEntry(sourcePath);
             FileSystemEntry destinationFile = GetEntry(destinationPath);
             if (sourceFile == null | sourceFile.IsDirectory)
@@ -41,17 +40,12 @@ namespace Utilities
             {
                 destinationFile = CreateFile(destinationPath);
             }
-            Stream sourceStream = OpenFile(sourcePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            Stream destinationStream = OpenFile(destinationPath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
-            while (sourceStream.Position < sourceStream.Length)
+
+            using (Stream sourceStream = OpenFile(sourcePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (Stream destinationStream = OpenFile(destinationPath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite))
             {
-                int readSize = (int)Math.Max(bufferLength, sourceStream.Length - sourceStream.Position);
-                byte[] buffer = new byte[readSize];
-                sourceStream.Read(buffer, 0, buffer.Length);
-                destinationStream.Write(buffer, 0, buffer.Length);
+                sourceStream.CopyTo(destinationStream);
             }
-            sourceStream.Close();
-            destinationStream.Close();
         }
 
         public abstract string Name
