@@ -4,21 +4,22 @@
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using Utilities;
 
 namespace SMBLibrary
 {
     public partial class NTFileSystemAdapter : INTFileStore
     {
+        private static readonly ILog logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         private const int BytesPerSector = 512;
         private const int ClusterSize = 4096;
 
         private IFileSystem m_fileSystem;
-
-        public event EventHandler<LogEntry> OnLogEntry;
 
         public NTFileSystemAdapter(IFileSystem fileSystem)
         {
@@ -58,7 +59,7 @@ namespace SMBLibrary
             catch (Exception ex)
             {
                 NTStatus status = ToNTStatus(ex);
-                Log(Severity.Verbose, "CreateFile: Error retrieving '{0}'. {1}.", path, status);
+                logger.Debug($"CreateFile: Error retrieving '{path}'. {status}.", ex);
                 return status;
             }
 
@@ -85,7 +86,7 @@ namespace SMBLibrary
                 if (entry != null)
                 {
                     // File already exists, fail the request
-                    Log(Severity.Verbose, "CreateFile: File '{0}' already exist", path);
+                    logger.Debug($"CreateFile: File '{path}' already exist");
                     fileStatus = FileStatus.FILE_EXISTS;
                     return NTStatus.STATUS_OBJECT_NAME_COLLISION;
                 }
@@ -99,19 +100,19 @@ namespace SMBLibrary
                 {
                     if (forceDirectory)
                     {
-                        Log(Severity.Information, "CreateFile: Creating directory '{0}'", path);
+                        logger.Info($"CreateFile: Creating directory '{path}'");
                         entry = m_fileSystem.CreateDirectory(path);
                     }
                     else
                     {
-                        Log(Severity.Information, "CreateFile: Creating file '{0}'", path);
+                        logger.Info($"CreateFile: Creating file '{path}'");
                         entry = m_fileSystem.CreateFile(path);
                     }
                 }
                 catch (Exception ex)
                 {
                     NTStatus status = ToNTStatus(ex);
-                    Log(Severity.Verbose, "CreateFile: Error creating '{0}'. {1}.", path, status);
+                    logger.Debug($"CreateFile: Error creating '{path}'. {status}.", ex);
                     return status;
                 }
                 fileStatus = FileStatus.FILE_CREATED;
@@ -137,19 +138,19 @@ namespace SMBLibrary
                     {
                         if (forceDirectory)
                         {
-                            Log(Severity.Information, "CreateFile: Creating directory '{0}'", path);
+                            logger.Info($"CreateFile: Creating directory '{path}'");
                             entry = m_fileSystem.CreateDirectory(path);
                         }
                         else
                         {
-                            Log(Severity.Information, "CreateFile: Creating file '{0}'", path);
+                            logger.Info($"CreateFile: Creating file '{path}'");
                             entry = m_fileSystem.CreateFile(path);
                         }
                     }
                     catch (Exception ex)
                     {
                         NTStatus status = ToNTStatus(ex);
-                        Log(Severity.Verbose, "CreateFile: Error creating '{0}'. {1}.", path, status);
+                        logger.Debug($"CreateFile: Error creating '{path}'. {status}.", ex);
                         return status;
                     }
                     fileStatus = FileStatus.FILE_CREATED;
@@ -174,7 +175,7 @@ namespace SMBLibrary
                         catch (Exception ex)
                         {
                             NTStatus status = ToNTStatus(ex);
-                            Log(Severity.Verbose, "CreateFile: Error truncating '{0}'. {1}.", path, status);
+                            logger.Debug($"CreateFile: Error truncating '{path}'. {status}.", ex);
                             return status;
                         }
                         fileStatus = FileStatus.FILE_OVERWRITTEN;
@@ -186,10 +187,10 @@ namespace SMBLibrary
                         {
                             m_fileSystem.Delete(path);
                         }
-                        catch(Exception ex)
+                        catch (Exception ex)
                         {
                             NTStatus status = ToNTStatus(ex);
-                            Log(Severity.Verbose, "CreateFile: Error deleting '{0}'. {1}.", path, status);
+                            logger.Debug($"CreateFile: Error deleting '{path}'. {status}.", ex);
                             return status;
                         }
 
@@ -197,19 +198,19 @@ namespace SMBLibrary
                         {
                             if (forceDirectory)
                             {
-                                Log(Severity.Information, "CreateFile: Creating directory '{0}'", path);
+                                logger.Info($"CreateFile: Creating directory '{path}'");
                                 entry = m_fileSystem.CreateDirectory(path);
                             }
                             else
                             {
-                                Log(Severity.Information, "CreateFile: Creating file '{0}'", path);
+                                logger.Info($"CreateFile: Creating file '{path}'");
                                 entry = m_fileSystem.CreateFile(path);
                             }
                         }
                         catch (Exception ex)
                         {
                             NTStatus status = ToNTStatus(ex);
-                            Log(Severity.Verbose, "CreateFile: Error creating '{0}'. {1}.", path, status);
+                            logger.Debug($"CreateFile: Error creating '{path}'. {status}.", ex);
                             return status;
                         }
                         fileStatus = FileStatus.FILE_SUPERSEDED;
@@ -266,11 +267,11 @@ namespace SMBLibrary
             catch (Exception ex)
             {
                 NTStatus status = ToNTStatus(ex);
-                Log(Severity.Verbose, "OpenFile: Cannot open '{0}', Access={1}, Share={2}. NTStatus: {3}.", path, fileAccess, fileShareString, status);
+                logger.Debug($"OpenFile: Cannot open '{path}', Access={fileAccess}, Share={fileShareString}. NTStatus: {status}.", ex);
                 return status;
             }
 
-            Log(Severity.Information, "OpenFileStream: Opened '{0}', Access={1}, Share={2}, Buffered={3}", path, fileAccess, fileShareString, buffered);
+            logger.Info($"OpenFileStream: Opened '{path}', Access={fileAccess}, Share={fileShareString}, Buffered={buffered}");
             if (buffered)
             {
                 stream = new PrefetchedStream(stream);
@@ -284,7 +285,7 @@ namespace SMBLibrary
             FileHandle fileHandle = (FileHandle)handle;
             if (fileHandle.Stream != null)
             {
-                Log(Severity.Verbose, "CloseFile: Closing '{0}'.", fileHandle.Path);
+                logger.Debug($"CloseFile: Closing '{fileHandle.Path}'.");
                 fileHandle.Stream.Close();
             }
 
@@ -293,11 +294,11 @@ namespace SMBLibrary
                 try
                 {
                     m_fileSystem.Delete(fileHandle.Path);
-                    Log(Severity.Verbose, "CloseFile: Deleted '{0}'.", fileHandle.Path);
+                    logger.Debug($"CloseFile: Deleted '{fileHandle.Path}'.");
                 }
-                catch
+                catch (Exception ex)
                 {
-                    Log(Severity.Verbose, "CloseFile: Error deleting '{0}'.", fileHandle.Path);
+                    logger.Debug($"CloseFile: Error deleting '{fileHandle.Path}'.", ex);
                 }
             }
             return NTStatus.STATUS_SUCCESS;
@@ -311,7 +312,7 @@ namespace SMBLibrary
             Stream stream = fileHandle.Stream;
             if (stream == null || !stream.CanRead)
             {
-                Log(Severity.Verbose, "ReadFile: Cannot read '{0}', Invalid Operation.", path);
+                logger.Debug($"ReadFile: Cannot read '{path}', Invalid Operation.");
                 return NTStatus.STATUS_ACCESS_DENIED;
             }
 
@@ -325,7 +326,7 @@ namespace SMBLibrary
             catch (Exception ex)
             {
                 NTStatus status = ToNTStatus(ex);
-                Log(Severity.Verbose, "ReadFile: Cannot read '{0}'. {1}.", path, status);
+                logger.Debug($"ReadFile: Cannot read '{path}'. {status}.", ex);
                 return status;
             }
 
@@ -345,7 +346,7 @@ namespace SMBLibrary
             Stream stream = fileHandle.Stream;
             if (stream == null || !stream.CanWrite)
             {
-                Log(Severity.Verbose, "WriteFile: Cannot write '{0}'. Invalid Operation.", path);
+                logger.Debug($"WriteFile: Cannot write '{path}'. Invalid Operation.");
                 return NTStatus.STATUS_ACCESS_DENIED;
             }
 
@@ -357,7 +358,7 @@ namespace SMBLibrary
             catch (Exception ex)
             {
                 NTStatus status = ToNTStatus(ex);
-                Log(Severity.Verbose, "WriteFile: Cannot write '{0}'. {1}.", path, status);
+                logger.Debug($"WriteFile: Cannot write '{path}'. {status}.", ex);
                 return status;
             }
             numberOfBytesWritten = data.Length;
@@ -378,21 +379,6 @@ namespace SMBLibrary
         {
             output = null;
             return NTStatus.STATUS_NOT_SUPPORTED;
-        }
-
-        public void Log(Severity severity, string message)
-        {
-            // To be thread-safe we must capture the delegate reference first
-            EventHandler<LogEntry> handler = OnLogEntry;
-            if (handler != null)
-            {
-                handler(this, new LogEntry(DateTime.Now, severity, "NT FileSystem Adapter", message));
-            }
-        }
-
-        public void Log(Severity severity, string message, params object[] args)
-        {
-            Log(severity, String.Format(message, args));
         }
 
         /// <param name="exception">IFileSystem exception</param>

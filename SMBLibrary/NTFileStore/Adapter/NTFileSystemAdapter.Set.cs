@@ -29,7 +29,7 @@ namespace SMBLibrary
                 catch (Exception ex)
                 {
                     NTStatus status = ToNTStatus(ex);
-                    Log(Severity.Verbose, "SetFileInformation: Failed to set file attributes on '{0}'. {1}.", fileHandle.Path, status);
+                    logger.Debug($"SetFileInformation: Failed to set file attributes on '{fileHandle.Path}'. {status}.", ex);
                     return status;
                 }
 
@@ -40,7 +40,7 @@ namespace SMBLibrary
                 catch (Exception ex)
                 {
                     NTStatus status = ToNTStatus(ex);
-                    Log(Severity.Verbose, "SetFileInformation: Failed to set file dates on '{0}'. {1}.", fileHandle.Path, status);
+                    logger.Debug($"SetFileInformation: Failed to set file dates on '{fileHandle.Path}'. {status}.");
                     return status;
                 }
                 return NTStatus.STATUS_SUCCESS;
@@ -71,7 +71,7 @@ namespace SMBLibrary
                 catch (Exception ex)
                 {
                     NTStatus status = ToNTStatus(ex);
-                    Log(Severity.Verbose, "SetFileInformation: Cannot rename '{0}'. {1}.", fileHandle.Path, status);
+                    logger.Debug($"SetFileInformation: Cannot rename '{fileHandle.Path}'. {status}.", ex);
                     return status;
                 }
                 fileHandle.Path = destination;
@@ -90,12 +90,12 @@ namespace SMBLibrary
                     try
                     {
                         m_fileSystem.Delete(fileHandle.Path);
-                        Log(Severity.Information, "SetFileInformation: Deleted '{0}'", fileHandle.Path);
+                        logger.Info($"SetFileInformation: Deleted '{fileHandle.Path}'");
                     }
                     catch (Exception ex)
                     {
                         NTStatus status = ToNTStatus(ex);
-                        Log(Severity.Information, "SetFileInformation: Error deleting '{0}'. {1}.", fileHandle.Path, status);
+                        logger.Info($"SetFileInformation: Error deleting '{fileHandle.Path}'. {status}.", ex);
                         return status;
                     }
                 }
@@ -111,7 +111,7 @@ namespace SMBLibrary
                 catch (Exception ex)
                 {
                     NTStatus status = ToNTStatus(ex);
-                    Log(Severity.Verbose, "SetFileInformation: Cannot set allocation for '{0}'. {1}.", fileHandle.Path, status);
+                    logger.Debug($"SetFileInformation: Cannot set allocation for '{fileHandle.Path}'. {status}.", ex);
                     return status;
                 }
                 return NTStatus.STATUS_SUCCESS;
@@ -126,7 +126,7 @@ namespace SMBLibrary
                 catch (Exception ex)
                 {
                     NTStatus status = ToNTStatus(ex);
-                    Log(Severity.Verbose, "SetFileInformation: Cannot set end of file for '{0}'. {1}.", fileHandle.Path, status);
+                    logger.Debug($"SetFileInformation: Cannot set end of file for '{fileHandle.Path}'. {status}.", ex);
                     return status;
                 }
                 return NTStatus.STATUS_SUCCESS;
