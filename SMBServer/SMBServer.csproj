@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>SMBServer</RootNamespace>
     <AssemblyName>SMBServer</AssemblyName>
-    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
     <UpgradeBackupLocation>
@@ -137,6 +137,10 @@
     <Compile Include="UserCollection.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\AuthenticationLibrary\AuthenticationLibrary.csproj">
+      <Project>{7b5ee770-554a-49bd-b77b-aff381116c10}</Project>
+      <Name>AuthenticationLibrary</Name>
+    </ProjectReference>
     <ProjectReference Include="..\SMBLibrary\SMBLibrary.csproj">
       <Project>{8D9E8F5D-FD13-4E4C-9723-A333DA2034A7}</Project>
       <Name>SMBLibrary</Name>

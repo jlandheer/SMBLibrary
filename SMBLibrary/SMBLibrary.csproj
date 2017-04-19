@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>SMBLibrary</RootNamespace>
     <AssemblyName>SMBLibrary</AssemblyName>
-    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
     <UpgradeBackupLocation>
@@ -94,37 +94,13 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Authentication\GSSAPI\Enums\GSSAttributeName.cs" />
-    <Compile Include="Authentication\GSSAPI\GSSProvider.cs" />
-    <Compile Include="Authentication\GSSAPI\IGSSMechanism.cs" />
-    <Compile Include="Authentication\GSSAPI\SPNEGO\DerEncodingHelper.cs" />
-    <Compile Include="Authentication\GSSAPI\SPNEGO\SimpleProtectedNegotiationToken.cs" />
-    <Compile Include="Authentication\GSSAPI\SPNEGO\SimpleProtectedNegotiationTokenInit.cs" />
-    <Compile Include="Authentication\GSSAPI\SPNEGO\SimpleProtectedNegotiationTokenResponse.cs" />
-    <Compile Include="Authentication\NTLM\Helpers\AuthenticationMessageUtils.cs" />
-    <Compile Include="Authentication\NTLM\Helpers\AVPairUtils.cs" />
-    <Compile Include="Authentication\NTLM\Helpers\MD4.cs" />
-    <Compile Include="Authentication\NTLM\Helpers\NTLMCryptography.cs" />
-    <Compile Include="Authentication\NTLM\Helpers\RC4.cs" />
-    <Compile Include="Authentication\NTLM\IndependentNTLMAuthenticationProvider.cs" />
-    <Compile Include="Authentication\NTLM\NTLMAuthenticationProviderBase.cs" />
-    <Compile Include="Authentication\NTLM\Structures\AuthenticateMessage.cs" />
-    <Compile Include="Authentication\NTLM\Structures\ChallengeMessage.cs" />
-    <Compile Include="Authentication\NTLM\Structures\Enums\AVPairKey.cs" />
-    <Compile Include="Authentication\NTLM\Structures\Enums\MessageTypeName.cs" />
-    <Compile Include="Authentication\NTLM\Structures\Enums\NegotiateFlags.cs" />
-    <Compile Include="Authentication\NTLM\Structures\NegotiateMessage.cs" />
-    <Compile Include="Authentication\NTLM\Structures\NTLMv2ClientChallenge.cs" />
-    <Compile Include="Authentication\NTLM\Structures\NTLMVersion.cs" />
     <Compile Include="Client\ConnectionState.cs" />
     <Compile Include="Client\SMB1Client.cs" />
-    <Compile Include="Enums\NTStatus.cs" />
     <Compile Include="Enums\SMBTransportType.cs" />
     <Compile Include="Enums\Win32Error.cs" />
     <Compile Include="EnumStructures\AccessMask.cs" />
     <Compile Include="Exceptions\InvalidRequestException.cs" />
     <Compile Include="Exceptions\UnsupportedInformationLevelException.cs" />
-    <Compile Include="Helpers\FileTimeHelper.cs" />
     <Compile Include="NetBios\NameServicePackets\Enums\NameRecordType.cs" />
     <Compile Include="NetBios\NameServicePackets\Enums\NameServiceOperation.cs" />
     <Compile Include="NetBios\NameServicePackets\Enums\NetBiosSuffix.cs" />
@@ -597,8 +573,6 @@
     <Compile Include="SMB2\Structures\LockElement.cs" />
     <Compile Include="SMB2\Structures\NegotiateContext.cs" />
     <Compile Include="Tests\NetBiosTests.cs" />
-    <Compile Include="Tests\NTLMAuthenticationTests.cs" />
-    <Compile Include="Tests\NTLMSigningTests.cs" />
     <Compile Include="Tests\RC4Tests.cs" />
     <Compile Include="Tests\RPCTests.cs" />
     <Compile Include="Tests\SMB2SigningTests.cs" />
@@ -617,6 +591,10 @@
     <Content Include="RevisionHistory.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\AuthenticationLibrary\AuthenticationLibrary.csproj">
+      <Project>{7b5ee770-554a-49bd-b77b-aff381116c10}</Project>
+      <Name>AuthenticationLibrary</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Utilities\Utilities.csproj">
       <Project>{6E0F2D1E-6167-4032-BA90-DEE3A99207D0}</Project>
       <Name>Utilities</Name>
