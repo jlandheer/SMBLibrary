@@ -4,18 +4,18 @@
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using SMBLibrary.Services;
+using log4net;
 using SMBLibrary.SMB1;
 using Utilities;
+using System.IO;
+using System.Reflection;
 
 namespace SMBLibrary.Server.SMB1
 {
     internal class NTCreateHelper
     {
+        private static readonly ILog logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+
         internal static SMB1Command GetNTCreateResponse(SMB1Header header, NTCreateAndXRequest request, ISMBShare share, SMB1ConnectionState state)
         {
             SMB1Session session = state.GetSession(header.UID);
@@ -26,7 +26,7 @@ namespace SMBLibrary.Server.SMB1
             {
                 if (!((FileSystemShare)share).HasAccess(session.SecurityContext, path, createAccess))
                 {
-                    state.LogToServer(Severity.Verbose, "Create: Opening '{0}{1}' failed. User '{2}' was denied access.", share.Name, request.FileName, session.UserName);
+                    state.LogToServer(logger, Severity.Verbose, "Create: Opening '{0}{1}' failed. User '{2}' was denied access.", share.Name, request.FileName, session.UserName);
                     header.Status = NTStatus.STATUS_ACCESS_DENIED;
                     return new ErrorResponse(request.CommandName);
                 }
@@ -37,12 +37,12 @@ namespace SMBLibrary.Server.SMB1
             NTStatus createStatus = share.FileStore.CreateFile(out handle, out fileStatus, path, request.DesiredAccess, request.ShareAccess, request.CreateDisposition, request.CreateOptions, session.SecurityContext);
             if (createStatus != NTStatus.STATUS_SUCCESS)
             {
-                state.LogToServer(Severity.Verbose, "Create: Opening '{0}{1}' failed. NTStatus: '{2}'.", share.Name, path, createStatus);
+                state.LogToServer(logger, Severity.Verbose, "Create: Opening '{0}{1}' failed. NTStatus: '{2}'.", share.Name, path, createStatus);
                 header.Status = createStatus;
                 return new ErrorResponse(request.CommandName);
             }
 
-            state.LogToServer(Severity.Verbose, "Create: Opened '{0}{1}'.", share.Name, path);
+            state.LogToServer(logger, Severity.Verbose, "Create: Opened '{0}{1}'.", share.Name, path);
             ushort? fileID = session.AddOpenFile(header.TID, path, handle);
             if (!fileID.HasValue)
             {

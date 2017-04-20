@@ -145,7 +145,7 @@ namespace SMBLibrary.Server
                 }
                 else if (command is LogoffAndXRequest)
                 {
-                    state.LogToServer(Severity.Information, "Logoff: User '{0}' logged off.", session.UserName);
+                    state.LogToServer(logger, Severity.Information, "Logoff: User '{0}' logged off.", session.UserName);
                     m_securityProvider.DeleteSecurityContext(ref session.SecurityContext.AuthenticationContext);
                     state.RemoveSession(header.UID);
                     return new LogoffAndXResponse();
@@ -292,7 +292,7 @@ namespace SMBLibrary.Server
             SessionMessagePacket packet = new SessionMessagePacket();
             packet.Trailer = response.GetBytes();
             state.SendQueue.Enqueue(packet);
-            state.LogToServer(Severity.Verbose, "SMB1 message queued: {0} responses, First response: {1}, Packet length: {2}", response.Commands.Count, response.Commands[0].CommandName.ToString(), packet.Length);
+            state.LogToServer(logger, Severity.Verbose, "SMB1 message queued: {0} responses, First response: {1}, Packet length: {2}", response.Commands.Count, response.Commands[0].CommandName.ToString(), packet.Length);
         }
 
         private static void PrepareResponseHeader(SMB1Header responseHeader, SMB1Header requestHeader)

@@ -4,13 +4,13 @@
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
-using System;
-using System.Collections.Generic;
-using System.Text;
+using log4net;
 using SMBLibrary.Authentication.GSSAPI;
 using SMBLibrary.Authentication.NTLM;
 using SMBLibrary.SMB1;
 using Utilities;
+using System;
+using System.Reflection;
 
 namespace SMBLibrary.Server.SMB1
 {
@@ -19,6 +19,8 @@ namespace SMBLibrary.Server.SMB1
     /// </summary>
     internal class SessionSetupHelper
     {
+        private static readonly ILog logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+
         internal static SMB1Command GetSessionSetupResponse(SMB1Header header, SessionSetupAndXRequest request, GSSProvider securityProvider, SMB1ConnectionState state)
         {
             SessionSetupAndXResponse response = new SessionSetupAndXResponse();
@@ -29,7 +31,7 @@ namespace SMBLibrary.Server.SMB1
             header.Status = securityProvider.NTLMAuthenticate(state.AuthenticationContext, message);
             if (header.Status != NTStatus.STATUS_SUCCESS)
             {
-                state.LogToServer(Severity.Information, "Session Setup: User '{0}' failed authentication (Domain: '{1}', OS: '{2}'), NTStatus: {3}", request.AccountName, request.PrimaryDomain, request.NativeOS, header.Status);
+                state.LogToServer(logger, Severity.Information, "Session Setup: User '{0}' failed authentication (Domain: '{1}', OS: '{2}'), NTStatus: {3}", request.AccountName, request.PrimaryDomain, request.NativeOS, header.Status);
                 return new ErrorResponse(request.CommandName);
             }
 
@@ -40,12 +42,12 @@ namespace SMBLibrary.Server.SMB1
             SMB1Session session;
             if (!isGuest.HasValue || !isGuest.Value)
             {
-                state.LogToServer(Severity.Information, "Session Setup: User '{0}' authenticated successfully (Domain: '{1}', Workstation: '{2}', OS version: '{3}').", message.UserName, message.DomainName, message.WorkStation, osVersion);
+                state.LogToServer(logger, Severity.Information, "Session Setup: User '{0}' authenticated successfully (Domain: '{1}', Workstation: '{2}', OS version: '{3}').", message.UserName, message.DomainName, message.WorkStation, osVersion);
                 session = state.CreateSession(message.UserName, message.WorkStation, sessionKey, accessToken);
             }
             else
             {
-                state.LogToServer(Severity.Information, "Session Setup: User '{0}' failed authentication (Domain: '{1}', Workstation: '{2}', OS version: '{3}'), logged in as guest.", message.UserName, message.DomainName, message.WorkStation, osVersion);
+                state.LogToServer(logger, Severity.Information, "Session Setup: User '{0}' failed authentication (Domain: '{1}', Workstation: '{2}', OS version: '{3}'), logged in as guest.", message.UserName, message.DomainName, message.WorkStation, osVersion);
                 session = state.CreateSession("Guest", message.WorkStation, sessionKey, accessToken);
                 response.Action = SessionSetupAction.SetupGuest;
             }
@@ -85,7 +87,7 @@ namespace SMBLibrary.Server.SMB1
                 string domainName = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.DomainName) as string;
                 string machineName = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.MachineName) as string;
                 string osVersion = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.OSVersion) as string;
-                state.LogToServer(Severity.Information, "Session Setup: User '{0}' failed authentication (Domain: '{1}', Workstation: '{2}', OS version: '{3}'), NTStatus: {4}", userName, domainName, machineName, osVersion, status);
+                state.LogToServer(logger, Severity.Information, "Session Setup: User '{0}' failed authentication (Domain: '{1}', Workstation: '{2}', OS version: '{3}'), NTStatus: {4}", userName, domainName, machineName, osVersion, status);
                 header.Status = status;
                 return new ErrorResponse(request.CommandName);
             }
@@ -122,12 +124,12 @@ namespace SMBLibrary.Server.SMB1
                 bool? isGuest = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.IsGuest) as bool?;
                 if (!isGuest.HasValue || !isGuest.Value)
                 {
-                    state.LogToServer(Severity.Information, "Session Setup: User '{0}' authenticated successfully (Domain: '{1}', Workstation: '{2}', OS version: '{3}').", userName, domainName, machineName, osVersion);
+                    state.LogToServer(logger, Severity.Information, "Session Setup: User '{0}' authenticated successfully (Domain: '{1}', Workstation: '{2}', OS version: '{3}').", userName, domainName, machineName, osVersion);
                     state.CreateSession(header.UID, userName, machineName, sessionKey, accessToken);
                 }
                 else
                 {
-                    state.LogToServer(Severity.Information, "Session Setup: User '{0}' failed authentication (Domain: '{1}', Workstation: '{2}', OS version: '{3}'), logged in as guest.", userName, domainName, machineName, osVersion);
+                    state.LogToServer(logger, Severity.Information, "Session Setup: User '{0}' failed authentication (Domain: '{1}', Workstation: '{2}', OS version: '{3}'), logged in as guest.", userName, domainName, machineName, osVersion);
                     state.CreateSession(header.UID, "Guest", machineName, sessionKey, accessToken);
                     response.Action = SessionSetupAction.SetupGuest;
                 }

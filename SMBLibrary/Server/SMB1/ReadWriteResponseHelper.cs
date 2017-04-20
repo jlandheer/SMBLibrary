@@ -4,19 +4,17 @@
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using SMBLibrary.RPC;
+using log4net;
 using SMBLibrary.SMB1;
-using SMBLibrary.Services;
 using Utilities;
+using System.Reflection;
 
 namespace SMBLibrary.Server.SMB1
 {
     internal class ReadWriteResponseHelper
     {
+        private static readonly ILog logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+
         internal static SMB1Command GetReadResponse(SMB1Header header, ReadRequest request, ISMBShare share, SMB1ConnectionState state)
         {
             SMB1Session session = state.GetSession(header.UID);
@@ -31,7 +29,7 @@ namespace SMBLibrary.Server.SMB1
             {
                 if (!((FileSystemShare)share).HasReadAccess(session.SecurityContext, openFile.Path))
                 {
-                    state.LogToServer(Severity.Verbose, "Read from '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
+                    state.LogToServer(logger, Severity.Verbose, "Read from '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
                     header.Status = NTStatus.STATUS_ACCESS_DENIED;
                     return new ErrorResponse(request.CommandName);
                 }
@@ -64,7 +62,7 @@ namespace SMBLibrary.Server.SMB1
             {
                 if (!((FileSystemShare)share).HasReadAccess(session.SecurityContext, openFile.Path))
                 {
-                    state.LogToServer(Severity.Verbose, "ReadAndX from '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
+                    state.LogToServer(logger, Severity.Verbose, "ReadAndX from '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
                     header.Status = NTStatus.STATUS_ACCESS_DENIED;
                     return new ErrorResponse(request.CommandName);
                 }
@@ -106,7 +104,7 @@ namespace SMBLibrary.Server.SMB1
             {
                 if (!((FileSystemShare)share).HasWriteAccess(session.SecurityContext, openFile.Path))
                 {
-                    state.LogToServer(Severity.Verbose, "Write to '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
+                    state.LogToServer(logger, Severity.Verbose, "Write to '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
                     header.Status = NTStatus.STATUS_ACCESS_DENIED;
                     return new ErrorResponse(request.CommandName);
                 }
@@ -137,7 +135,7 @@ namespace SMBLibrary.Server.SMB1
             {
                 if (!((FileSystemShare)share).HasWriteAccess(session.SecurityContext, openFile.Path))
                 {
-                    state.LogToServer(Severity.Verbose, "WriteAndX to '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
+                    state.LogToServer(logger, Severity.Verbose, "WriteAndX to '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
                     header.Status = NTStatus.STATUS_ACCESS_DENIED;
                     return new ErrorResponse(request.CommandName);
                 }

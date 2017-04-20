@@ -4,18 +4,19 @@
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using SMBLibrary.Services;
+using log4net;
 using SMBLibrary.SMB1;
+using System;
+using System.IO;
 using Utilities;
+using System.Reflection;
 
 namespace SMBLibrary.Server.SMB1
 {
     internal class OpenAndXHelper
     {
+        private static readonly ILog logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+
         internal static SMB1Command GetOpenAndXResponse(SMB1Header header, OpenAndXRequest request, ISMBShare share, SMB1ConnectionState state)
         {
             SMB1Session session = state.GetSession(header.UID);
@@ -43,7 +44,7 @@ namespace SMBLibrary.Server.SMB1
             {
                 if (!((FileSystemShare)share).HasAccess(session.SecurityContext, path, fileAccess))
                 {
-                    state.LogToServer(Severity.Verbose, "OpenAndX: Opening '{0}{1}' failed. User '{2}' was denied access.", share.Name, request.FileName, session.UserName);
+                    state.LogToServer(logger, Severity.Verbose, "OpenAndX: Opening '{0}{1}' failed. User '{2}' was denied access.", share.Name, request.FileName, session.UserName);
                     header.Status = NTStatus.STATUS_ACCESS_DENIED;
                     return new ErrorResponse(request.CommandName);
                 }
@@ -54,11 +55,11 @@ namespace SMBLibrary.Server.SMB1
             header.Status = share.FileStore.CreateFile(out handle, out fileStatus, path, desiredAccess, shareAccess, createDisposition, createOptions, session.SecurityContext);
             if (header.Status != NTStatus.STATUS_SUCCESS)
             {
-                state.LogToServer(Severity.Verbose, "OpenAndX: Opening '{0}{1}' failed. NTStatus: '{2}'.", share.Name, path, header.Status);
+                state.LogToServer(logger, Severity.Verbose, "OpenAndX: Opening '{0}{1}' failed. NTStatus: '{2}'.", share.Name, path, header.Status);
                 return new ErrorResponse(request.CommandName);
             }
 
-            state.LogToServer(Severity.Verbose, "OpenAndX: Opened '{0}{1}'.", share.Name, path);
+            state.LogToServer(logger, Severity.Verbose, "OpenAndX: Opened '{0}{1}'.", share.Name, path);
             ushort? fileID = session.AddOpenFile(header.TID, path, handle);
             if (!fileID.HasValue)
             {

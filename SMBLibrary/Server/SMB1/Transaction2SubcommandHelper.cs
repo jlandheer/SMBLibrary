@@ -4,17 +4,19 @@
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
+using log4net;
+using SMBLibrary.SMB1;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using SMBLibrary.SMB1;
 using Utilities;
+using System.Reflection;
 
 namespace SMBLibrary.Server.SMB1
 {
     internal class Transaction2SubcommandHelper
     {
+        private static readonly ILog logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+
         internal static Transaction2FindFirst2Response GetSubcommandResponse(SMB1Header header, Transaction2FindFirst2Request subcommand, ISMBShare share, SMB1ConnectionState state)
         {
             SMB1Session session = state.GetSession(header.UID);
@@ -35,12 +37,12 @@ namespace SMBLibrary.Server.SMB1
             NTStatus searchStatus = SMB1FileStoreHelper.QueryDirectory(out entries, share.FileStore, fileNamePattern, informationClass, session.SecurityContext);
             if (searchStatus != NTStatus.STATUS_SUCCESS)
             {
-                state.LogToServer(Severity.Verbose, "FindFirst2: Searched for '{0}{1}', NTStatus: {2}", share.Name, fileNamePattern, searchStatus.ToString());
+                state.LogToServer(logger, Severity.Verbose, "FindFirst2: Searched for '{0}{1}', NTStatus: {2}", share.Name, fileNamePattern, searchStatus.ToString());
                 header.Status = searchStatus;
                 return null;
             }
             // We ignore SearchAttributes
-            state.LogToServer(Severity.Information, "FindFirst2: Searched for '{0}{1}', found {2} matching entries", share.Name, fileNamePattern, entries.Count);
+            state.LogToServer(logger, Severity.Information, "FindFirst2: Searched for '{0}{1}', found {2} matching entries", share.Name, fileNamePattern, entries.Count);
 
             // [MS-CIFS] If no matching entries are found, the server SHOULD fail the request with STATUS_NO_SUCH_FILE.
             if (entries.Count == 0)
@@ -131,7 +133,7 @@ namespace SMBLibrary.Server.SMB1
             {
                 if (!((FileSystemShare)share).HasReadAccess(session.SecurityContext, @"\"))
                 {
-                    state.LogToServer(Severity.Verbose, "QueryFileSystemInformation on '{0}' failed. User '{1}' was denied access.", share.Name, session.UserName);
+                    state.LogToServer(logger, Severity.Verbose, "QueryFileSystemInformation on '{0}' failed. User '{1}' was denied access.", share.Name, session.UserName);
                     header.Status = NTStatus.STATUS_ACCESS_DENIED;
                     return null;
                 }
@@ -142,11 +144,11 @@ namespace SMBLibrary.Server.SMB1
             NTStatus queryStatus = SMB1FileStoreHelper.GetFileSystemInformation(out queryFSInformation, share.FileStore, subcommand.InformationLevel);
             if (queryStatus != NTStatus.STATUS_SUCCESS)
             {
-                state.LogToServer(Severity.Verbose, "GetFileSystemInformation on '{0}' failed. Information level: {1}, NTStatus: {2}", share.Name, subcommand.InformationLevel, queryStatus);
+                state.LogToServer(logger, Severity.Verbose, "GetFileSystemInformation on '{0}' failed. Information level: {1}, NTStatus: {2}", share.Name, subcommand.InformationLevel, queryStatus);
                 header.Status = queryStatus;
                 return null;
             }
-            state.LogToServer(Severity.Information, "GetFileSystemInformation on '{0}' succeeded. Information level: {1}", share.Name, subcommand.InformationLevel);
+            state.LogToServer(logger, Severity.Information, "GetFileSystemInformation on '{0}' succeeded. Information level: {1}", share.Name, subcommand.InformationLevel);
             response.SetQueryFSInformation(queryFSInformation, header.UnicodeFlag);
             return response;
         }
@@ -159,7 +161,7 @@ namespace SMBLibrary.Server.SMB1
             {
                 if (!((FileSystemShare)share).HasReadAccess(session.SecurityContext, path))
                 {
-                    state.LogToServer(Severity.Verbose, "QueryPathInformation on '{0}{1}' failed. User '{2}' was denied access.", share.Name, path, session.UserName);
+                    state.LogToServer(logger, Severity.Verbose, "QueryPathInformation on '{0}{1}' failed. User '{2}' was denied access.", share.Name, path, session.UserName);
                     header.Status = NTStatus.STATUS_ACCESS_DENIED;
                     return null;
                 }
@@ -170,11 +172,11 @@ namespace SMBLibrary.Server.SMB1
             NTStatus queryStatus = SMB1FileStoreHelper.GetFileInformation(out queryInformation, share.FileStore, path, subcommand.InformationLevel, session.SecurityContext);
             if (queryStatus != NTStatus.STATUS_SUCCESS)
             {
-                state.LogToServer(Severity.Verbose, "GetFileInformation on '{0}{1}' failed. Information level: {2}, NTStatus: {3}", share.Name, path, subcommand.InformationLevel, queryStatus);
+                state.LogToServer(logger, Severity.Verbose, "GetFileInformation on '{0}{1}' failed. Information level: {2}, NTStatus: {3}", share.Name, path, subcommand.InformationLevel, queryStatus);
                 header.Status = queryStatus;
                 return null;
             }
-            state.LogToServer(Severity.Information, "GetFileInformation on '{0}{1}' succeeded. Information level: {2}", share.Name, path, subcommand.InformationLevel);
+            state.LogToServer(logger, Severity.Information, "GetFileInformation on '{0}{1}' succeeded. Information level: {2}", share.Name, path, subcommand.InformationLevel);
             response.SetQueryInformation(queryInformation);
             return response;
         }
@@ -193,7 +195,7 @@ namespace SMBLibrary.Server.SMB1
             {
                 if (!((FileSystemShare)share).HasReadAccess(session.SecurityContext, openFile.Path))
                 {
-                    state.LogToServer(Severity.Verbose, "QueryFileInformation on '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
+                    state.LogToServer(logger, Severity.Verbose, "QueryFileInformation on '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
                     header.Status = NTStatus.STATUS_ACCESS_DENIED;
                     return null;
                 }
@@ -204,11 +206,11 @@ namespace SMBLibrary.Server.SMB1
             NTStatus queryStatus = SMB1FileStoreHelper.GetFileInformation(out queryInformation, share.FileStore, openFile.Handle, subcommand.InformationLevel);
             if (queryStatus != NTStatus.STATUS_SUCCESS)
             {
-                state.LogToServer(Severity.Verbose, "GetFileInformation on '{0}{1}' failed. Information level: {2}, NTStatus: {3}", share.Name, openFile.Path, subcommand.InformationLevel, queryStatus);
+                state.LogToServer(logger, Severity.Verbose, "GetFileInformation on '{0}{1}' failed. Information level: {2}, NTStatus: {3}", share.Name, openFile.Path, subcommand.InformationLevel, queryStatus);
                 header.Status = queryStatus;
                 return null;
             }
-            state.LogToServer(Severity.Information, "GetFileInformation on '{0}{1}' succeeded. Information level: {2}", share.Name, openFile.Path, subcommand.InformationLevel);
+            state.LogToServer(logger, Severity.Information, "GetFileInformation on '{0}{1}' succeeded. Information level: {2}", share.Name, openFile.Path, subcommand.InformationLevel);
             response.SetQueryInformation(queryInformation);
             return response;
         }
@@ -227,7 +229,7 @@ namespace SMBLibrary.Server.SMB1
             {
                 if (!((FileSystemShare)share).HasWriteAccess(session.SecurityContext, openFile.Path))
                 {
-                    state.LogToServer(Severity.Verbose, "SetFileInformation on '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
+                    state.LogToServer(logger, Severity.Verbose, "SetFileInformation on '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
                     header.Status = NTStatus.STATUS_ACCESS_DENIED;
                     return null;
                 }
@@ -240,13 +242,13 @@ namespace SMBLibrary.Server.SMB1
             }
             catch(UnsupportedInformationLevelException)
             {
-                state.LogToServer(Severity.Verbose, "SetFileInformation on '{0}{1}' failed. Information level: {2}, NTStatus: STATUS_OS2_INVALID_LEVEL", share.Name, openFile.Path, subcommand.InformationLevel);
+                state.LogToServer(logger, Severity.Verbose, "SetFileInformation on '{0}{1}' failed. Information level: {2}, NTStatus: STATUS_OS2_INVALID_LEVEL", share.Name, openFile.Path, subcommand.InformationLevel);
                 header.Status = NTStatus.STATUS_OS2_INVALID_LEVEL;
                 return null;
             }
             catch(Exception)
             {
-                state.LogToServer(Severity.Verbose, "SetFileInformation on '{0}{1}' failed. Information level: {2}, NTStatus: STATUS_INVALID_PARAMETER", share.Name, openFile.Path, subcommand.InformationLevel);
+                state.LogToServer(logger, Severity.Verbose, "SetFileInformation on '{0}{1}' failed. Information level: {2}, NTStatus: STATUS_INVALID_PARAMETER", share.Name, openFile.Path, subcommand.InformationLevel);
                 header.Status = NTStatus.STATUS_INVALID_PARAMETER;
                 return null;
             }
@@ -254,11 +256,11 @@ namespace SMBLibrary.Server.SMB1
             NTStatus status = SMB1FileStoreHelper.SetFileInformation(share.FileStore, openFile.Handle, information);
             if (status != NTStatus.STATUS_SUCCESS)
             {
-                state.LogToServer(Severity.Verbose, "SetFileInformation on '{0}{1}' failed. Information level: {2}, NTStatus: {3}", share.Name, openFile.Path, subcommand.InformationLevel, status);
+                state.LogToServer(logger, Severity.Verbose, "SetFileInformation on '{0}{1}' failed. Information level: {2}, NTStatus: {3}", share.Name, openFile.Path, subcommand.InformationLevel, status);
                 header.Status = status;
                 return null;
             }
-            state.LogToServer(Severity.Information, "SetFileInformation on '{0}{1}' succeeded. Information level: {2}", share.Name, openFile.Path, subcommand.InformationLevel);
+            state.LogToServer(logger, Severity.Information, "SetFileInformation on '{0}{1}' succeeded. Information level: {2}", share.Name, openFile.Path, subcommand.InformationLevel);
             Transaction2SetFileInformationResponse response = new Transaction2SetFileInformationResponse();
             return response;
         }

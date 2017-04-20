@@ -4,16 +4,18 @@
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
-using System;
-using System.Collections.Generic;
-using System.Text;
+using log4net;
 using SMBLibrary.SMB1;
 using Utilities;
+using System;
+using System.Reflection;
 
 namespace SMBLibrary.Server.SMB1
 {
     internal class TreeConnectHelper
     {
+        private static readonly ILog logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+
         internal static SMB1Command GetTreeConnectResponse(SMB1Header header, TreeConnectAndXRequest request, SMB1ConnectionState state, NamedPipeShare services, SMBShareCollection shares)
         {
             SMB1Session session = state.GetSession(header.UID);
@@ -41,7 +43,7 @@ namespace SMBLibrary.Server.SMB1
 
                 if (!((FileSystemShare)share).HasReadAccess(session.SecurityContext, @"\"))
                 {
-                    state.LogToServer(Severity.Verbose, "Tree Connect to '{0}' failed. User '{1}' was denied access.", share.Name, session.UserName);
+                    state.LogToServer(logger, Severity.Verbose, "Tree Connect to '{0}' failed. User '{1}' was denied access.", share.Name, session.UserName);
                     header.Status = NTStatus.STATUS_ACCESS_DENIED;
                     return new ErrorResponse(request.CommandName);
                 }
@@ -52,7 +54,7 @@ namespace SMBLibrary.Server.SMB1
                 header.Status = NTStatus.STATUS_INSUFF_SERVER_RESOURCES;
                 return new ErrorResponse(request.CommandName);
             }
-            state.LogToServer(Severity.Information, "Tree Connect: User '{0}' connected to '{1}'", session.UserName, share.Name);
+            state.LogToServer(logger, Severity.Information, "Tree Connect: User '{0}' connected to '{1}'", session.UserName, share.Name);
             header.TID = treeID.Value;
             if (isExtended)
             {
@@ -95,7 +97,7 @@ namespace SMBLibrary.Server.SMB1
         {
             SMB1Session session = state.GetSession(header.UID);
             session.DisconnectTree(header.TID);
-            state.LogToServer(Severity.Information, "Tree Disconnect: User '{0}' disconnected from '{1}'", session.UserName, share.Name);
+            state.LogToServer(logger, Severity.Information, "Tree Disconnect: User '{0}' disconnected from '{1}'", session.UserName, share.Name);
             return new TreeDisconnectResponse();
         }
     }

@@ -4,22 +4,26 @@
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
+using log4net;
+using SMBLibrary.Authentication.GSSAPI;
+using SMBLibrary.NetBios;
+using SMBLibrary.SMB1;
+using SMBLibrary.SMB2;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Threading;
-using SMBLibrary.Authentication.GSSAPI;
-using SMBLibrary.NetBios;
-using SMBLibrary.Services;
-using SMBLibrary.SMB1;
-using SMBLibrary.SMB2;
 using Utilities;
 
 namespace SMBLibrary.Server
 {
     public partial class SMBServer
     {
+        private static readonly ILog logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+
+
         public const int NetBiosOverTCPPort = 139;
         public const int DirectTCPPort = 445;
         public const string NTLanManagerDialect = "NT LM 0.12";
@@ -40,8 +44,6 @@ namespace SMBLibrary.Server
         private bool m_listening;
         private DateTime m_serverStartTime;
 
-        public event EventHandler<LogEntry> OnLogEntry;
-
         public SMBServer(SMBShareCollection shares, GSSProvider securityProvider)
         {
             m_shares = shares;
@@ -61,7 +63,7 @@ namespace SMBLibrary.Server
         {
             if (!m_listening)
             {
-                Log(Severity.Information, "Starting server");
+                logger.Info("Starting server");
                 m_serverAddress = serverAddress;
                 m_transport = transport;
                 m_enableSMB1 = enableSMB1;
@@ -79,7 +81,7 @@ namespace SMBLibrary.Server
 
         public void Stop()
         {
-            Log(Severity.Information, "Stopping server");
+            logger.Info("Stopping server");
             m_listening = false;
             SocketUtils.ReleaseSocket(m_listenerSocket);
         }
@@ -108,19 +110,19 @@ namespace SMBLibrary.Server
                 {
                     listenerSocket.BeginAccept(ConnectRequestCallback, listenerSocket);
                 }
-                Log(Severity.Debug, "Connection request error {0}", ex.ErrorCode);
+                logger.Debug($"Connection request error {ex.ErrorCode}", ex);
                 return;
             }
 
             // Windows will set the TCP keepalive timeout to 120 seconds for an SMB connection
             SocketUtils.SetKeepAlive(clientSocket, TimeSpan.FromMinutes(2));
-            ConnectionState state = new ConnectionState(Log);
+            ConnectionState state = new ConnectionState();
             // Disable the Nagle Algorithm for this tcp socket:
             clientSocket.NoDelay = true;
             state.ClientSocket = clientSocket;
             state.ClientEndPoint = clientSocket.RemoteEndPoint as IPEndPoint;
-            state.LogToServer(Severity.Verbose, "New connection request");
-            Thread senderThread = new Thread(delegate()
+            state.LogToServer(logger, Severity.Verbose, "New connection request");
+            Thread senderThread = new Thread(delegate ()
             {
                 ProcessSendQueue(state);
             });
@@ -160,7 +162,7 @@ namespace SMBLibrary.Server
             }
             catch (ObjectDisposedException)
             {
-                state.LogToServer(Severity.Debug, "The connection was terminated");
+                state.LogToServer(logger, Severity.Debug, "The connection was terminated");
                 m_connectionManager.ReleaseConnection(state);
                 return;
             }
@@ -169,11 +171,11 @@ namespace SMBLibrary.Server
                 const int WSAECONNRESET = 10054;
                 if (ex.ErrorCode == WSAECONNRESET)
                 {
-                    state.LogToServer(Severity.Debug, "The connection was forcibly closed by the remote host");
+                    state.LogToServer(logger, Severity.Debug, "The connection was forcibly closed by the remote host");
                 }
                 else
                 {
-                    state.LogToServer(Severity.Debug, "The connection was terminated, Socket error code: {0}", ex.ErrorCode);
+                    state.LogToServer(logger, Severity.Debug, $"The connection was terminated, Socket error code: {ex.ErrorCode}", ex);
                 }
                 m_connectionManager.ReleaseConnection(state);
                 return;
@@ -181,7 +183,7 @@ namespace SMBLibrary.Server
 
             if (numberOfBytesReceived == 0)
             {
-                state.LogToServer(Severity.Debug, "The client closed the connection");
+                state.LogToServer(logger, Severity.Debug, "The client closed the connection");
                 m_connectionManager.ReleaseConnection(state);
                 return;
             }
@@ -222,7 +224,7 @@ namespace SMBLibrary.Server
                 catch (Exception ex)
                 {
                     state.ClientSocket.Close();
-                    state.LogToServer(Severity.Warning, "Rejected Invalid NetBIOS session packet: {0}", ex.Message);
+                    state.LogToServer(logger, Severity.Warning, "Rejected Invalid NetBIOS session packet", ex);
                     break;
                 }
 
@@ -255,7 +257,7 @@ namespace SMBLibrary.Server
                 {
                     if (!acceptSMB1)
                     {
-                        state.LogToServer(Severity.Verbose, "Rejected SMB1 message");
+                        state.LogToServer(logger, Severity.Verbose, "Rejected SMB1 message");
                         state.ClientSocket.Close();
                         return;
                     }
@@ -267,11 +269,11 @@ namespace SMBLibrary.Server
                     }
                     catch (Exception ex)
                     {
-                        state.LogToServer(Severity.Warning, "Invalid SMB1 message: " + ex.Message);
+                        state.LogToServer(logger, Severity.Warning, "Invalid SMB1 message", ex.Message);
                         state.ClientSocket.Close();
                         return;
                     }
-                    state.LogToServer(Severity.Verbose, "SMB1 message received: {0} requests, First request: {1}, Packet length: {2}", message.Commands.Count, message.Commands[0].CommandName.ToString(), packet.Length);
+                    state.LogToServer(logger, Severity.Verbose, "SMB1 message received: {0} requests, First request: {1}, Packet length: {2}", message.Commands.Count, message.Commands[0].CommandName.ToString(), packet.Length);
                     if (state.Dialect == SMBDialect.NotSet && m_enableSMB2)
                     {
                         // Check if the client supports SMB 2
@@ -297,7 +299,7 @@ namespace SMBLibrary.Server
                     {
                         // [MS-SMB2] 3.3.5.3.2 If the string is not present in the dialect list and the server does not implement SMB,
                         // the server MUST disconnect the connection [..] without sending a response.
-                        state.LogToServer(Severity.Verbose, "Rejected SMB1 message");
+                        state.LogToServer(logger, Severity.Verbose, "Rejected SMB1 message");
                         state.ClientSocket.Close();
                     }
                 }
@@ -305,7 +307,7 @@ namespace SMBLibrary.Server
                 {
                     if (!acceptSMB2)
                     {
-                        state.LogToServer(Severity.Verbose, "Rejected SMB2 message");
+                        state.LogToServer(logger, Severity.Verbose, "Rejected SMB2 message");
                         state.ClientSocket.Close();
                         return;
                     }
@@ -317,22 +319,22 @@ namespace SMBLibrary.Server
                     }
                     catch (Exception ex)
                     {
-                        state.LogToServer(Severity.Warning, "Invalid SMB2 request chain: " + ex.Message);
+                        state.LogToServer(logger, Severity.Warning, "Invalid SMB2 request chain", ex.Message);
                         state.ClientSocket.Close();
                         return;
                     }
-                    state.LogToServer(Severity.Verbose, "SMB2 request chain received: {0} requests, First request: {1}, Packet length: {2}", requestChain.Count, requestChain[0].CommandName.ToString(), packet.Length);
+                    state.LogToServer(logger, Severity.Verbose, "SMB2 request chain received: {0} requests, First request: {1}, Packet length: {2}", requestChain.Count, requestChain[0].CommandName.ToString(), packet.Length);
                     ProcessSMB2RequestChain(requestChain, ref state);
                 }
                 else
                 {
-                    state.LogToServer(Severity.Warning, "Invalid SMB message");
+                    state.LogToServer(logger, Severity.Warning, "Invalid SMB message");
                     state.ClientSocket.Close();
                 }
             }
             else
             {
-                state.LogToServer(Severity.Warning, "Invalid NetBIOS packet");
+                state.LogToServer(logger, Severity.Warning, "Invalid NetBIOS packet");
                 state.ClientSocket.Close();
                 return;
             }
@@ -340,7 +342,7 @@ namespace SMBLibrary.Server
 
         private void ProcessSendQueue(ConnectionState state)
         {
-            state.LogToServer(Severity.Trace, "Entering ProcessSendQueue");
+            state.LogToServer(logger, Severity.Trace, "Entering ProcessSendQueue");
             while (true)
             {
                 SessionPacket response;
@@ -356,12 +358,12 @@ namespace SMBLibrary.Server
                 }
                 catch (SocketException ex)
                 {
-                    state.LogToServer(Severity.Debug, "Failed to send packet. SocketException: {0}", ex.Message);
+                    state.LogToServer(logger, Severity.Debug, "Failed to send packet", ex);
                     return;
                 }
                 catch (ObjectDisposedException)
                 {
-                    state.LogToServer(Severity.Debug, "Failed to send packet. ObjectDisposedException.");
+                    state.LogToServer(logger, Severity.Debug, "Failed to send packet. ObjectDisposedException.");
                     return;
                 }
             }
@@ -370,21 +372,6 @@ namespace SMBLibrary.Server
         public List<SessionInformation> GetSessionsInformation()
         {
             return m_connectionManager.GetSessionsInformation();
-        }
-
-        private void Log(Severity severity, string message)
-        {
-            // To be thread-safe we must capture the delegate reference first
-            EventHandler<LogEntry> handler = OnLogEntry;
-            if (handler != null)
-            {
-                handler(this, new LogEntry(DateTime.Now, severity, "SMB Server", message));
-            }
-        }
-
-        private void Log(Severity severity, string message, params object[] args)
-        {
-            Log(severity, String.Format(message, args));
         }
     }
 }

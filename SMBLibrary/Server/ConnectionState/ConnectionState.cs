@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Sockets;
 using SMBLibrary.NetBios;
 using Utilities;
+using log4net;
 
 namespace SMBLibrary.Server
 {
@@ -21,15 +22,13 @@ namespace SMBLibrary.Server
         public IPEndPoint ClientEndPoint;
         public NBTConnectionReceiveBuffer ReceiveBuffer;
         public BlockingQueue<SessionPacket> SendQueue;
-        protected LogDelegate LogToServerHandler;
         public SMBDialect Dialect;
         public object AuthenticationContext;
 
-        public ConnectionState(LogDelegate logToServerHandler)
+        public ConnectionState()
         {
             ReceiveBuffer = new NBTConnectionReceiveBuffer();
             SendQueue = new BlockingQueue<SessionPacket>();
-            LogToServerHandler = logToServerHandler;
             Dialect = SMBDialect.NotSet;
         }
 
@@ -39,7 +38,6 @@ namespace SMBLibrary.Server
             ClientEndPoint = state.ClientEndPoint;
             ReceiveBuffer = state.ReceiveBuffer;
             SendQueue = state.SendQueue;
-            LogToServerHandler = state.LogToServerHandler;
             Dialect = state.Dialect;
         }
 
@@ -55,18 +53,37 @@ namespace SMBLibrary.Server
             return new List<SessionInformation>();
         }
 
-        public void LogToServer(Severity severity, string message)
+        public void LogToServer(ILog logger, Severity severity, string message, Exception exception = null)
         {
             message = String.Format("[{0}] {1}", ConnectionIdentifier, message);
-            if (LogToServerHandler != null)
+            switch (severity)
             {
-                LogToServerHandler(severity, message);
+                case Severity.Critical:
+                    logger.Fatal(message, exception);
+                    break;
+                case Severity.Error:
+                    logger.Error(message, exception);
+                    break;
+                case Severity.Warning:
+                    logger.Warn(message, exception);
+                    break;
+                case Severity.Information:
+                    logger.Info(message, exception);
+                    break;
+                case Severity.Verbose:
+                case Severity.Debug:
+                case Severity.Trace:
+                    logger.Debug(message, exception);
+                    break;
+                default:
+                    break;
             }
+
         }
 
-        public void LogToServer(Severity severity, string message, params object[] args)
+        public void LogToServer(ILog logger, Severity severity, string message, params object[] args)
         {
-            LogToServer(severity, String.Format(message, args));
+            LogToServer(logger, severity, String.Format(message, args));
         }
 
         public string ConnectionIdentifier

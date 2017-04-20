@@ -4,11 +4,10 @@
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
-using System;
-using System.Collections.Generic;
+using log4net;
 using SMBLibrary.Authentication.GSSAPI;
-using SMBLibrary.Authentication.NTLM;
 using SMBLibrary.SMB2;
+using System.Reflection;
 using Utilities;
 
 namespace SMBLibrary.Server.SMB2
@@ -18,6 +17,8 @@ namespace SMBLibrary.Server.SMB2
     /// </summary>
     internal class SessionSetupHelper
     {
+        private static readonly ILog logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+
         internal static SMB2Command GetSessionSetupResponse(SessionSetupRequest request, GSSProvider securityProvider, SMB2ConnectionState state)
         {
             // [MS-SMB2] Windows [..] will also accept raw Kerberos messages and implicit NTLM messages as part of GSS authentication.
@@ -30,7 +31,7 @@ namespace SMBLibrary.Server.SMB2
                 string domainName = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.DomainName) as string;
                 string machineName = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.MachineName) as string;
                 string osVersion = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.OSVersion) as string;
-                state.LogToServer(Severity.Information, "Session Setup: User '{0}' failed authentication (Domain: '{1}', Workstation: '{2}', OS version: '{3}'), NTStatus: {4}", userName, domainName, machineName, osVersion, status);
+                state.LogToServer(logger, Severity.Information, "Session Setup: User '{0}' failed authentication (Domain: '{1}', Workstation: '{2}', OS version: '{3}'), NTStatus: {4}", userName, domainName, machineName, osVersion, status);
                 return new ErrorResponse(request.CommandName, status);
             }
 
@@ -65,12 +66,12 @@ namespace SMBLibrary.Server.SMB2
                 bool? isGuest = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.IsGuest) as bool?;
                 if (!isGuest.HasValue || !isGuest.Value)
                 {
-                    state.LogToServer(Severity.Information, "Session Setup: User '{0}' authenticated successfully (Domain: '{1}', Workstation: '{2}', OS version: '{3}').", userName, domainName, machineName, osVersion);
+                    state.LogToServer(logger, Severity.Information, "Session Setup: User '{0}' authenticated successfully (Domain: '{1}', Workstation: '{2}', OS version: '{3}').", userName, domainName, machineName, osVersion);
                     state.CreateSession(request.Header.SessionID, userName, machineName, sessionKey, accessToken);
                 }
                 else
                 {
-                    state.LogToServer(Severity.Information, "Session Setup: User '{0}' failed authentication (Domain: '{1}', Workstation: '{2}', OS version: '{3}'), logged in as guest.", userName, domainName, machineName, osVersion);
+                    state.LogToServer(logger, Severity.Information, "Session Setup: User '{0}' failed authentication (Domain: '{1}', Workstation: '{2}', OS version: '{3}'), logged in as guest.", userName, domainName, machineName, osVersion);
                     state.CreateSession(request.Header.SessionID, "Guest", machineName, sessionKey, accessToken);
                     response.SessionFlags = SessionFlags.IsGuest;
                 }

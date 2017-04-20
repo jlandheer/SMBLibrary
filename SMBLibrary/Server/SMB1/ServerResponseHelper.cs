@@ -4,17 +4,18 @@
  * the GNU Lesser Public License as published by the Free Software Foundation,
  * either version 3 of the License, or (at your option) any later version.
  */
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+using log4net;
 using SMBLibrary.SMB1;
 using Utilities;
+using System.Collections.Generic;
+using System.Reflection;
 
 namespace SMBLibrary.Server.SMB1
 {
     internal partial class ServerResponseHelper
     {
+        private static readonly ILog logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+
         internal static SMB1Command GetCloseResponse(SMB1Header header, CloseRequest request, ISMBShare share, SMB1ConnectionState state)
         {
             SMB1Session session = state.GetSession(header.UID);
@@ -25,7 +26,7 @@ namespace SMBLibrary.Server.SMB1
                 return new ErrorResponse(request.CommandName);
             }
 
-            state.LogToServer(Severity.Information, "Close: Closing '{0}{1}'", share.Name, openFile.Path);
+            state.LogToServer(logger, Severity.Information, "Close: Closing '{0}{1}'", share.Name, openFile.Path);
             header.Status = share.FileStore.CloseFile(openFile.Handle);
             if (header.Status != NTStatus.STATUS_SUCCESS)
             {

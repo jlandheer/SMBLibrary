@@ -65,7 +65,7 @@ namespace SMBLibrary.Server
                     // [MS-SMB2] If the request being received is not an SMB2 NEGOTIATE Request [..]
                     // and Connection.NegotiateDialect is 0xFFFF or 0x02FF, the server MUST
                     // disconnect the connection.
-                    state.LogToServer(Severity.Debug, "Invalid Connection State for command {0}", command.CommandName.ToString());
+                    state.LogToServer(logger, Severity.Debug, "Invalid Connection State for command {0}", command.CommandName.ToString());
                     state.ClientSocket.Close();
                     return null;
                 }
@@ -74,7 +74,7 @@ namespace SMBLibrary.Server
             {
                 // [MS-SMB2] If Connection.NegotiateDialect is 0x0202, 0x0210, 0x0300, 0x0302, or 0x0311,
                 // the server MUST disconnect the connection.
-                state.LogToServer(Severity.Debug, "Rejecting NegotiateRequest. NegotiateDialect is already set");
+                state.LogToServer(logger, Severity.Debug, "Rejecting NegotiateRequest. NegotiateDialect is already set");
                 state.ClientSocket.Close();
                 return null;
             }
@@ -108,7 +108,7 @@ namespace SMBLibrary.Server
                 }
                 else if (command is LogoffRequest)
                 {
-                    state.LogToServer(Severity.Information, "Logoff: User '{0}' logged off.", session.UserName);
+                    state.LogToServer(logger, Severity.Information, "Logoff: User '{0}' logged off.", session.UserName);
                     m_securityProvider.DeleteSecurityContext(ref session.SecurityContext.AuthenticationContext);
                     state.RemoveSession(command.Header.SessionID);
                     return new LogoffResponse();
@@ -206,7 +206,7 @@ namespace SMBLibrary.Server
             SessionMessagePacket packet = new SessionMessagePacket();
             packet.Trailer = response.GetBytes();
             state.SendQueue.Enqueue(packet);
-            state.LogToServer(Severity.Verbose, "SMB2 response queued: {0}, Packet length: {1}", response.CommandName.ToString(), packet.Length);
+            state.LogToServer(logger, Severity.Verbose, "SMB2 response queued: {0}, Packet length: {1}", response.CommandName.ToString(), packet.Length);
         }
 
         private static void EnqueueResponseChain(ConnectionState state, List<SMB2Command> responseChain)
@@ -231,7 +231,7 @@ namespace SMBLibrary.Server
             SessionMessagePacket packet = new SessionMessagePacket();
             packet.Trailer = SMB2Command.GetCommandChainBytes(responseChain, sessionKey);
             state.SendQueue.Enqueue(packet);
-            state.LogToServer(Severity.Verbose, "SMB2 response chain queued: Response count: {0}, First response: {1}, Packet length: {2}", responseChain.Count, responseChain[0].CommandName.ToString(), packet.Length);
+            state.LogToServer(logger, Severity.Verbose, "SMB2 response chain queued: Response count: {0}, First response: {1}, Packet length: {2}", responseChain.Count, responseChain[0].CommandName.ToString(), packet.Length);
         }
 
         private static void UpdateSMB2Header(SMB2Command response, SMB2Command request)
